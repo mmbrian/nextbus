@@ -1,0 +1,1833 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html lang="en">
+    <head>
+        <title>Saarfahrplan Map request</title>
+        <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+        <link rel="shortcut icon" href="/hafas-res/img/favicon.ico" type="image/ico">
+        <link
+            rel="apple-touch-icon-precomposed"
+            href="/hafas-res/img/apple-touch-icon-precomposed.png">
+        <script type="text/javascript" src="/hafas-res/js/hafas_standard.js?guiV=47"></script>
+        <script type="text/javascript">
+            <!--
+            var imgPath = "/hafas-res/img/";
+            var mapwidth = 449;
+            var mapheight = 449;
+            var globalMap = "";
+            var mapBaseURL = "http://www.saarfahrplan.de/cgi-bin/query.exe/en?seqnr=1&ident=5q.01660710.145256" +
+                    "1227&";
+            var askUserText = "Select this point as start for your journey?";
+            var offsetCorrection = "hafas";
+            var confirmCoordinateClickedByJS = "yes";
+            //
+            -->
+        </script>
+        <script type="text/javascript" src="/hafas-res/js/FSuggest_v1.2.js?guiV=47"></script>
+        <script type="text/javascript">
+            /* <![CDATA[ */
+            var t_suggestionsoff = "Disable suggestions";
+            var t_suggestionson = "Enable suggestions";
+            var t_minimapoff = "Disable mini-map";
+            var t_suggestions = "Suggestions";
+            var t_topMatches = "Top matches";
+            var t_furtherMatches = "Search for additional matches ...";
+            var t_meansOfTransport = "Means of transport at";
+            var t_connectionsPerYear = "rides per year";
+            var t_location = "Location";
+            var t_limitSearchMap = "Limit search to map section";
+            var t_minimapon = "Enable mini-map";
+            var t_suggestHint1 = "No top matches found. Please make use of the <br/><b>suggest functionality</b>, " +
+                    "by typing at least <br/><b>";
+            var t_suggestHint2 = "</b>characters!";
+            var t_filterStations = "St.";
+            var t_filterAddresses = "Addresses";
+            var t_filterPOI = "POI";
+            function fixedLoc(par) {
+                //document.getElementById('inputEvaId').value = par.evaId;
+            }
+            function getElementsByClass(searchClass, domNode, tagName) {
+                if (domNode == null) {
+                    domNode = document.body;
+                }
+                if (tagName == null) {
+                    tagName = "*";
+                }
+                var el = new Array;
+                var tags = domNode.getElementsByTagName(tagName);
+                var tcl = "" + searchClass + "";
+                for (i = 0, j = 0; i < tags.length; i++) {
+                    var test = " " + tags[i].className + " ";
+                    if (tags[i].className.indexOf(searchClass) != -1) {
+                        el[j++] = tags[i];
+                    }
+                }
+                return el;
+            }
+            function initHafasSuggest() {
+                var elements = getElementsByClass("HafasSuggest", null, "input");
+                for (var i = 0; i < elements.length; i++) {
+                    if (elements[i].id != 'undefined') {
+                        var suggid = elements[i].id;
+                    } else {
+                        var suggid = 'hfs_suggest_input_' + i;
+                    }
+                    var classes = elements[i]
+                        .className
+                        .split(" ");
+                    var suggestType = 0;
+                    var stationBoardSuggest = false;
+                    var isVia = false;
+                    var callbackArr = new Array();
+                    for (var j = 0; j < classes.length; j++) {
+                        if (classes[j] == "st") {
+                            suggestType += 1;
+                        } else if (classes[j] == "adr") {
+                            suggestType += 2;
+                        } else if (classes[j] == "poi") {
+                            suggestType += 4;
+                        } else if (classes[j] == "stb") {
+                            stationBoardSuggest = true;
+                        } else if (classes[j] == "via") {
+                            isVia = true;
+                        } else if (classes[j].indexOf('sc_') >= 0) {
+                            var selCallback = eval(classes[j].replace('sc_', ''));
+                            callbackArr.push(selCallback);
+                        }
+                    }
+                    if (suggestType == 0) {
+                        suggestType = 255;
+                    }
+                    var attr = (elements[i].getAttribute('name') != null)
+                        ? elements[i].getAttribute('name')
+                        : 'S';
+                    var currParam = {
+                        cookiename: 'std30-history',
+                        detachable: true,
+                        loc: suggid,
+                        minChar: 4,
+                        requestType: 'js',
+                        stopDelay: 400,
+                        type: attr,
+                        useAutoFillIn: true,
+                        useCategory: false,
+                        useFurtherMatches: true,
+                        useHighlighting: true,
+                        useHouseNumber: false,
+                        useMaps: true,
+                        useProducts: true,
+                        useTopFavorites: true,
+                        useTypeFilter: false,
+                        useWeight: true,
+                        useWrap: false
+                    };
+                    if (stationBoardSuggest) {
+                        currParam.type = "stb";
+                    }
+                    if (isVia) {
+                        suggid.match(/(\d)/);
+                        var viaNo = RegExp.$1;
+                        currParam.requestURL = 'http://www.saarfahrplan.de/cgi-bin/ajax-getstop.exe/eny?start=1&tpl=suggest2json' +
+                                '&REQ0JourneyStops' + viaNo + '.0A=' + suggestType + '&getstop=1&noSession=yes&REQ0JourneyStopsB=12&REQ0JourneyStops' + viaNo + '.0G=';
+                    } else {
+                        currParam.requestURL = 'http://www.saarfahrplan.de/cgi-bin/ajax-getstop.exe/eny?start=1&tpl=suggest2json' +
+                                '&REQ0JourneyStopsS0A=' + suggestType + '&getstop=1&noSession=yes&REQ0JourneyStopsB=12&REQ0JourneyStopsS0G=';
+                    }
+                    currParam.selectCallback = function (par) {
+                        for (var i = 0; i < callbackArr.length; i++) {
+                            callbackArr[i](par);
+                        }
+                    };
+                    new FSuggest(currParam);
+                }
+            }
+            /* ]]> */
+        </script>
+        <script type="text/javascript">
+            /* <![CDATA[ */
+            gImagePath = '/hafas-res/img/';
+            gJSMapImagePath = gImagePath + "js/";
+            /* ]]> */
+        </script>
+        <script type="text/javascript">
+            /* <![CDATA[ */
+            function infotextstation(param) { //map,extId,puic,name,x,y
+                var t = "<div class='jmap_infobox'><ul class='jmap_slider'>";
+                if (true) {
+                    t += "<li>"
+                    t += "<a id='content_0_titlediv' class='active' ";
+                    t += "onclick='var t=document.getElementById(\"content_0_titlediv\");var c=document.ge" +
+                            "tElementById(\"content_0_contentdiv\");";
+                    t += "if(c.style.display!=\"block\")";
+                    t += "{if(document.getElementById(\"content_0_contentdiv\"))document.getElementById(\"" +
+                            "content_0_contentdiv\").style.display=\"none\";if(document.getElementById(\"cont" +
+                            "ent_0_titlediv\"))document.getElementById(\"content_0_titlediv\").className=\"\"" +
+                            ";if(document.getElementById(\"content_3_contentdiv\"))document.getElementById(\"" +
+                            "content_3_contentdiv\").style.display=\"none\";if(document.getElementById(\"cont" +
+                            "ent_3_titlediv\"))document.getElementById(\"content_3_titlediv\").className=\"\"" +
+                            ";t.className=\"active\";c.style.display=\"block\";\
+";
+                    t += "}'>";
+                    t += "Station";
+                    t += "</a></li>";
+                }
+                if (true) {
+                    t += "<li>"
+                    t += "<a id='content_3_titlediv' class='' ";
+                    t += "onclick='var t=document.getElementById(\"content_3_titlediv\");var c=document.ge" +
+                            "tElementById(\"content_3_contentdiv\");";
+                    t += "if(c.style.display!=\"block\")";
+                    t += "{if(document.getElementById(\"content_0_contentdiv\"))document.getElementById(\"" +
+                            "content_0_contentdiv\").style.display=\"none\";if(document.getElementById(\"cont" +
+                            "ent_0_titlediv\"))document.getElementById(\"content_0_titlediv\").className=\"\"" +
+                            ";if(document.getElementById(\"content_3_contentdiv\"))document.getElementById(\"" +
+                            "content_3_contentdiv\").style.display=\"none\";if(document.getElementById(\"cont" +
+                            "ent_3_titlediv\"))document.getElementById(\"content_3_titlediv\").className=\"\"" +
+                            ";t.className=\"active\";c.style.display=\"block\";\
+";
+                    t += "}'>";
+                    t += "Departures";
+                    t += "</a></li>";
+                }
+                t += "</ul>";
+                if (true) {
+                    t += "<div class='jmap_infobox_subcontent_standard' id='content_0_contentdiv' style='d" +
+                            "isplay:block'>";
+                    t += "\
+<div>\
+<div class='jmap_infobox_content_row'>\
+<a href='http://www.saarfahrpla" +
+                            "n.de/cgi-bin/query.exe/en?seqnr=1&ident=5q.01660710.1452561227&SID=A=1" + (typeof param.extId != 'undefined'
+                        ? "@L=" + param.extId.toString()
+                        : "") + (typeof param.puic != 'undefined'
+                        ? "@U=" + param.puic.toString()
+                        : "") + (typeof param.name != 'undefined'
+                        ? "@O=" + param.name.toString()
+                        : "") + (typeof param.x != 'undefined'
+                        ? "@X=" + param.x.toString()
+                        : "") + (typeof param.y != 'undefined'
+                        ? "@Y=" + param.y.toString()
+                        : "") + "&changeQueryInputData=yes&'>Choose as start</a>\
+<\/div>\
+<div class='jmap_infob" +
+                            "ox_content_row'>\
+<a href='http://www.saarfahrplan.de/cgi-bin/query.exe/en?seqnr" +
+                            "=1&ident=5q.01660710.1452561227&ZID=A=1" + (typeof param.extId != 'undefined'
+                        ? "@L=" + param.extId.toString()
+                        : "") + (typeof param.puic != 'undefined'
+                        ? "@U=" + param.puic.toString()
+                        : "") + (typeof param.name != 'undefined'
+                        ? "@O=" + param.name.toString()
+                        : "") + (typeof param.x != 'undefined'
+                        ? "@X=" + param.x.toString()
+                        : "") + (typeof param.y != 'undefined'
+                        ? "@Y=" + param.y.toString()
+                        : "") + "&changeQueryInputData=yes&'>Choose as destination</a>\
+<\/div>\
+<\/div>\
+";
+                    t += "</div>";
+                }
+                if (true) {
+                    t += "<div class='jmap_infobox_subcontent_bhftafel' id='content_3_contentdiv'>";
+                    t += "\
+<div>\
+<div id='localdepdiv_" + (typeof param.extId != 'undefined'
+                        ? param.extId.toString()
+                        : "-1") + "' class='jmap_infobox_bhftafel'>\
+<iframe frameborder='0' src='http://www.saarfa" +
+                            "hrplan.de/cgi-bin/stboard.exe/en?widget=yes&evaId=" + (typeof param.extId != 'undefined'
+                        ? param.extId.toString()
+                        : "-1") + "&lanelink=yes&sqltm=1&showJourneys=7&boardType=dep&productsFilter=11111111111' " +
+                            "\
+class='jmap_infobox_iframe_bhftafel'>\
+<br/>Your Browser doesn't support IFram" +
+                            "es. Please follow this Link instead:<br />\
+<a href='http://www.saarfahrplan.de/" +
+                            "cgi-bin/stboard.exe/en?start=1&amp;disableEquivs=yes&amp;boardType=dep&amp;input" +
+                            "=A=1" + (typeof param.extId != 'undefined'
+                        ? "@L=" + param.extId.toString()
+                        : "") + (typeof param.puic != 'undefined'
+                        ? "@U=" + param.puic.toString()
+                        : "") + (typeof param.name != 'undefined'
+                        ? "@O=" + param.name.toString()
+                        : "") + (typeof param.x != 'undefined'
+                        ? "@X=" + param.x.toString()
+                        : "") + (typeof param.y != 'undefined'
+                        ? "@Y=" + param.y.toString()
+                        : "") + "'></a>\
+</iframe>\
+</div>\
+</div>\
+";
+                    t += "</div>";
+                }
+                t += "</div>";
+                return t;
+            };
+            function initStreetView(extId, x, y) {
+                document
+                    .getElementById('streetviewWindow')
+                    .src = "http://www.saarfahrplan.de/cgi-bin/help.exe/en?tpl=streetview&x=" + x + "&y=" + y + "&evaId=" + extId;
+            }
+            /* ]]> */
+        </script>
+        <script type="text/javascript">
+            /* <![CDATA[ */
+            function infotextmap(param) { //map,extId,puic,name,x,y
+                Map = param.map;
+                if (typeof param.x == 'undefined' && typeof param.lon != 'undefined') 
+                    param.x = param.lon;
+                if (typeof param.y == 'undefined' && typeof param.lat != 'undefined') 
+                    param.y = param.lat;
+                var t = "<div class='jmap_infobox'><ul class='jmap_slider'>";
+                t += "<li>"
+                t += "<a id='map_content_0_titlediv' class='active' ";
+                t += "onclick='var t=document.getElementById(\"map_content_0_titlediv\");var c=documen" +
+                        "t.getElementById(\"map_content_0_contentdiv\");";
+                t += "if(c.style.display!=\"block\")";
+                t += "{document.getElementById(\"map_content_0_contentdiv\").style.display=\"none\";do" +
+                        "cument.getElementById(\"map_content_0_titlediv\").className=\"\";t.className=\"a" +
+                        "ctive\";c.style.display=\"block\";\
+";
+                t += "}'>";
+                t += "Select from map";
+                t += "</a></li>";
+                t += "</ul>";
+                t += "<div class='jmap_infobox_subcontent_standard' id='map_content_0_contentdiv' styl" +
+                        "e='display:block'>";
+                t += "\
+<div>\
+<div class='jmap_infobox_content_row'>\
+<a href='http://www.saarfahrpla" +
+                        "n.de/cgi-bin/query.exe/en?seqnr=1&ident=5q.01660710.1452561227&SID=A=16" + (typeof param.name != 'undefined'
+                    ? "@O=" + param.name.toString()
+                    : "@O=Select from map") + (typeof param.x != 'undefined'
+                    ? "@X=" + param.x.toString()
+                    : "") + (typeof param.y != 'undefined'
+                    ? "@Y=" + param.y.toString()
+                    : "") + "&changeQueryInputData=yes'>Choose as start</a>\
+<\/div>\
+<div class='jmap_infobo" +
+                        "x_content_row'>\
+<a href='http://www.saarfahrplan.de/cgi-bin/query.exe/en?seqnr=" +
+                        "1&ident=5q.01660710.1452561227&ZID=A=16" + (typeof param.name != 'undefined'
+                    ? "@O=" + param.name.toString()
+                    : "@O=Select from map") + (typeof param.x != 'undefined'
+                    ? "@X=" + param.x.toString()
+                    : "") + (typeof param.y != 'undefined'
+                    ? "@Y=" + param.y.toString()
+                    : "") + "&changeQueryInputData=yes'>Choose as destination</a>\
+<\/div>\
+<\/div>\
+";
+                t += "</div>";
+                t += "</div>";
+                return t;
+            };
+            /* ]]> */
+        </script>
+        <script type="text/javascript" src="/hafas-res/js/prototype.js"></script>
+        <script type="text/javascript">
+            /* <![CDATA[ */
+            if (Prototype.Version < '1.6') {
+                // Extend Prototype's Hash class to 1.6 API
+                Hash.prototype = Object.extend({
+                    get: function (key) {
+                        return this[key]
+                    },
+                    set: function (key, value) {
+                        this[key] = value
+                    },
+                    unset: function (key) {
+                        return this.remove()
+                    }
+                }, Hash.prototype);
+            }
+            /* ]]> */ < /script>
+<script type="text/javascript " src=" / hafas - res / js / jsmap_v1.00 _dev / AJSMapBaseClass.js
+                ? guiV = 47 "></script>
+ < script type = "text/javascript" >
+                /* <![CDATA[ */
+                var l = document.createElement("link");
+            l.rel = "stylesheet";
+            l.type = "text/css";
+            l.href = "/hafas-res/css/jsmap.css?guiV=47";
+            document
+                .getElementsByTagName("head")[0]
+                .appendChild(l);
+            /* ]]> */
+            </script>
+<script type="text/javascript " src=" / hafas - res / js / jsmap_v1.00 _dev / CCoord.js
+                ? guiV = 47 "></script>
+ < script type = "text/javascript" src = "/hafas-res/js/jsmap_v1.00_dev/AAjaxMap.js" > </script> < script type = "text/javascript" src = "http://maps.google.com/maps/api/js?sensor=false&v=3.19&" > </script> < script type = "text/javascript" src = "/hafas-res/js/jsmap_v1.00_dev/AGoogleMap.js?guiV=47" > </script> < script type = "text/javascript" src = "/hafas-res/js/jsmap_v1.00_dev/CGoogleMap.js?guiV=47" > </script> < script type = "text/javascript" src = "/hafas-res/js/jsmap_v1.00_dev/AHafasMap.js?guiV=47" > </script> < script type = "text/javascript" >
+                /* <![CDATA[ */
+                var localmapurl = gJSMapImagePath + "CHafasConnectionMap/";
+            if (typeof gLocParamsConnectionMap == 'undefined') {
+                var gLocParamsConnectionMap = new Hash();
+                gLocParamsConnectionMap["station"] = {
+                    hotspot: {
+                        x: 5,
+                        y: 5
+                    },
+                    imageheight: 10,
+                    imageurl: gImagePath + "space.gif",
+                    imagewidth: 10,
+                    text: "station",
+                    type: "location"
+                };
+                gLocParamsConnectionMap["start"] = {
+                    hotspot: {
+                        x: 15,
+                        y: 34
+                    },
+                    imageheight: 34,
+                    imageurl: localmapurl + "start_flag.png",
+                    imagewidth: 29,
+                    shadowheight: 17,
+                    shadowurl: localmapurl + "shadow_15_15.png",
+                    shadowwidth: 17,
+                    text: "start",
+                    type: "location"
+                };
+                gLocParamsConnectionMap["end"] = {
+                    hotspot: {
+                        x: 15,
+                        y: 34
+                    },
+                    imageheight: 34,
+                    imageurl: localmapurl + "ziel_flag.png",
+                    imagewidth: 29,
+                    shadowheight: 17,
+                    shadowurl: localmapurl + "shadow_15_15.png",
+                    shadowwidth: 17,
+                    text: "end",
+                    type: "location"
+                };
+                gLocParamsConnectionMap["walk"] = {
+                    hotspot: {
+                        x: 15,
+                        y: 34
+                    },
+                    imageheight: 34,
+                    imageurl: localmapurl + "walk.gif",
+                    imagewidth: 29,
+                    text: "Fu&#223;weg",
+                    type: "location"
+                };
+                gLocParamsConnectionMap["car"] = {
+                    hotspot: {
+                        x: 15,
+                        y: 34
+                    },
+                    imageheight: 34,
+                    imageurl: localmapurl + "car_map.png",
+                    imagewidth: 29,
+                    text: "Car",
+                    type: "location"
+                };
+                gLocParamsConnectionMap["prod"] = {
+                    hotspot: {
+                        x: 15,
+                        y: 34
+                    },
+                    imageheight: 34,
+                    imagewidth: 29,
+                    type: "location"
+                };
+                gLocParamsConnectionMap["change"] = {
+                    hotspot: {
+                        x: 15,
+                        y: 34
+                    },
+                    imageheight: 34,
+                    imageurl: localmapurl + "stop_map.png",
+                    imagewidth: 29,
+                    text: "change",
+                    type: "location"
+                };
+                gLocParamsConnectionMap["sbbSTATION"] = {
+                    hotspot: {
+                        x: 8,
+                        y: 8
+                    },
+                    imageheight: 16,
+                    imageurl: localmapurl + "change.gif",
+                    imagewidth: 16,
+                    text: "change",
+                    type: "location"
+                };
+                gLocParamsConnectionMap["sbbADDRESS"] = {
+                    hotspot: {
+                        x: 8,
+                        y: 8
+                    },
+                    imageheight: 16,
+                    imageurl: localmapurl + "address.gif",
+                    imagewidth: 16,
+                    text: "change",
+                    type: "location"
+                };
+                gLocParamsConnectionMap["sbbPOI"] = {
+                    hotspot: {
+                        x: 8,
+                        y: 8
+                    },
+                    imageheight: 16,
+                    imageurl: localmapurl + "poi.gif",
+                    imagewidth: 16,
+                    text: "change",
+                    type: "location"
+                };
+            }
+            /* ]]> */ < /script>
+<script type="text/javascript " src=" / hafas - res / js / jsmap_v1.00 _dev / CHafasConnectionMap.js
+                ? guiV = 47 "></script>
+ < script type = "text/javascript" > var gImagePath = '/hafas-res/img/';
+            var fsugg_map = '<img src="/hafas-res/img/icon_google_earth.gif">';
+        </script>
+        <link rel="stylesheet" type="text/css" href="/hafas-res/css/vgs.css?guiV=47">
+        <style type="text/css">
+            ul.jmap_slider {
+                margin: 0;
+                list-style-type: none;
+                padding: 0;
+            }
+            ul.jmap_slider a {
+                color: black;
+            }
+            .additionMapMenu {
+                background-color: white;
+                border: 2px solid #dfdfdf;
+                font-size: 11px;
+                padding: 0 0 0 4px;
+                position: absolute;
+                right: 116px;
+                top: 4px;
+                width: 85px;
+                line-height: 20px;
+                z-index: 200000;
+            }
+            .additionMapMenu a {
+                color: black;
+                font-weight: bold;
+            }
+            .suggestButton {
+                background-position: 2px 3px;
+                background-repeat: no-repeat;
+                background-image: url(/hafas-res/img/icon_calexport.gif);
+            }
+            #suggestion div {
+                background-image: url(/hafas-res/img/suggest_stop.gif);
+                background-repeat: no-repeat;
+                background-position: 2px 2px;
+            }
+            #suggestion div.train,
+            #suggestion div.trainselected {
+                background-image: url(/hafas-res/img/look/prod_ic.gif);
+                background-repeat: no-repeat;
+                background-position: 3px 1px;
+            }
+            #suggestion div.poi,
+            #suggestion div.poiselected {
+                background-image: url(/hafas-res/img/suggest_poi.gif);
+                background-repeat: no-repeat;
+                background-position: 2px 2px;
+            }
+            #suggestion div.adr,
+            #suggestion div.adrselected {
+                background-image: url(/hafas-res/img/suggest_adr.gif);
+                background-repeat: no-repeat;
+                background-position: 2px 2px;
+            }
+            #suggestion div.delfi,
+            #suggestion div.delfiselected {
+                background-image: url(/hafas-res/img/suggest_delfi.gif);
+                background-repeat: no-repeat;
+                background-position: 5px 3px;
+            }
+            #suggestion div.furtherMatches,
+            #suggestion div.furtherMatchesselected {
+                background-image: none;
+            }
+        </style>
+        <link
+            rel="stylesheet"
+            type="text/css"
+            href="/hafas-res/css/vgs_suggest.css?guiV=47">
+    </head>
+    <body onload="initHafasSuggest();">
+        <div id="hafas">
+            <a name="top"></a>
+            <table class="hafasHeader" cellspacing="0" summary="Header">
+                <tr>
+                    <td class="logo bottom nopadding" style="width:300px;">
+                        <a href="http://www.saarfahrplan.de"><img src="/hafas-res/img/logo_saarfahrplan.jpg" alt="Saarfahrplan"></a>
+                    </td>
+                    <td class="logo bottom nopadding" style="width:400px;">
+                        <a href="http://www.vgs-online.de/?p=997"><img src="/hafas-res/img/logo_saarfahrplan.gif" alt="Saarfahrplan"></a>
+                    </td>
+                    <td class="logo bottom nopadding" style="width:auto;">
+                        <a href="http://www.vgs-online.de"><img src="/hafas-res/img/logo_vgs.jpg" alt="VGS"></a>
+                    </td>
+                    <td class="logo bottom nopadding" style="width:171px;">
+                        <a href="http://www.saarvv.de"><img src="/hafas-res/img/logo_saarvv.jpg" alt="SaarVV"></a>
+                    </td>
+                </tr>
+                <tr>
+                    <td
+                        colspan="3"
+                        style="background:url(/hafas-res/img/header_line.gif) repeat-x;height:41px;">
+                        Der Saarfahrplan optimiert f&#252;r mobile Bowser:
+                        <a class="headerLink" href="http://mobil.saarfahrplan.de">mobil.saarfahrplan.de</a>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                        <a
+                            class="headerLink"
+                            style="color:#ff0000;font-weight:bold;"
+                            href="http://www.vgs-online.de/fahrplanauskunft/">Auch als App verf&#252;gbar (hier klicken)!</a>
+                    </td>
+                    <td
+                        colspan="1"
+                        style="background:url(/hafas-res/img/header_line.gif) repeat-x;height:41px;"
+                        align="right">
+                        <b>Hotline: 06898 / 500 4000</b>
+                    </td>
+                </tr>
+            </table>
+            <table class="hafasSlider" cellspacing="0" summary="HAFAS-Navigation">
+                <tr>
+                    <td class="slider">
+                        <a href="http://www.saarfahrplan.de/cgi-bin/query.exe/en?">Route&nbsp;Planner</a>
+                    </td>
+                    <td class="activeslider">
+                        <a
+                            href="http://www.saarfahrplan.de/cgi-bin/query.exe/en?view=map&SetGlobalOptionGO_mapSearch=ACTIVE&REQMapCenterX=9741016&REQMapCenterY=52376763&REQMapScaling=500000">Map</a>
+                    </td>
+                    <td class="slider">
+                        <a href="http://www.saarfahrplan.de/cgi-bin/stboard.exe/en?">Arrival&nbsp;/&nbsp;Departure</a>
+                    </td>
+                    <td class="slider">
+                        <a href="http://www.saarfahrplan.de/cgi-bin/tb/query-p2w.exe/en?whichTask=pf&">Timetable&nbsp;Booklet</a>
+                    </td>
+                    <td class="slider">
+                        <a href="http://www.saarfahrplan.de/cgi-bin/tb/query-p2w.exe/en?whichTask=hst&">Stop&nbsp;Timetable</a>
+                    </td>
+                    <td class="slider">
+                        <a href="http://www.saarfahrplan.de/cgi-bin/query.exe/en?wai=yes&">Text Only</a>
+                    </td>
+                    <td class="slider">
+                        <a href="http://www.saarfahrplan.de/cgi-bin/eu/query.exe/en?">International
+                            <span class="red">(beta)</span>
+                        </a>
+                    </td>
+                </tr>
+            </table>
+            <table class="hafasHeader" cellspacing="0" summary="Select language">
+                <tr>
+                    <td class="changeLanguage borderbottom" style="padding-left:10px;">
+                        <a
+                            class="language"
+                            href="http://www.saarfahrplan.de/cgi-bin/query.exe/dn?view=map&REQMapFixedMap=GLOBAL&SetGlobalOptionGO_mapSearch=ACTIVE&"><img
+                            class="language"
+                            src="/hafas-res/img/flag_germany.gif"
+                            border="0"
+                            width="16"
+                            height="10"
+                            alt="Deutsch"
+                            title="Deutsch"/></a>
+                        <a
+                            class="activelanguage"
+                            href="http://www.saarfahrplan.de/cgi-bin/query.exe/en?view=map&REQMapFixedMap=GLOBAL&SetGlobalOptionGO_mapSearch=ACTIVE&"><img
+                            class="language"
+                            src="/hafas-res/img/flag_uk.gif"
+                            border="0"
+                            width="16"
+                            height="10"
+                            alt="English"
+                            title="English"/></a>
+                        <a
+                            class="language"
+                            href="http://www.saarfahrplan.de/cgi-bin/query.exe/fn?view=map&REQMapFixedMap=GLOBAL&SetGlobalOptionGO_mapSearch=ACTIVE&"><img
+                            class="language"
+                            src="/hafas-res/img/flag_france.gif"
+                            border="0"
+                            width="16"
+                            height="10"
+                            alt="Fran&#231;ais"
+                            title="Fran&#231;ais"/></a>
+                    </td>
+                </tr>
+            </table>
+            <table class="hafasHeader" cellspacing="0" summary="main title">
+                <tr>
+                    <td class="pagetitle">Map request</td>
+                    <td class="pagetitle right">&nbsp;</td>
+                </tr>
+            </table>
+            <form
+                action="http://www.saarfahrplan.de/cgi-bin/query.exe/en?seqnr=1&ident=5q.01660710.1452561227&OK#focus"
+                name="map_results_form"
+                method="post"
+                style="display:inline">
+                <div style="margin:-5px 0;">
+                    <table class="hafasButtons" cellspacing="0">
+                        <tr>
+                            <td>
+                                <a
+                                    href="http://www.saarfahrplan.de/cgi-bin/query.exe/en?seqnr=1&ident=5q.01660710.1452561227&RemoveGlobalOptionGO_callMapFromPosition&RemoveGlobalOptionGO_activeMapSlider&"
+                                    accesskey="z"><img
+                                    class="icon"
+                                    src="/hafas-res/img/icon_std.gif"
+                                    width="13"
+                                    height="13"
+                                    alt=""/>
+                                    Back</a>
+                                <a
+                                    href="http://www.saarfahrplan.de/cgi-bin/query.exe/en?seqnr=1&ident=5q.01660710.1452561227&view=map&REQMapTask=RECALL&application=PRINTVIEWMAP&"
+                                    target="Printview"
+                                    onclick="if(typeof currentMapSlider != 'undefined'){ this.href='http://www.saarfahrplan.de/cgi-bin/query.exe/en?seqnr=1&ident=5q.01660710.1452561227&view=map&REQMapTask=RECALL&application=PRINTVIEWMAP&&MapFocus='+currentMapSlider; this.href+= Map_mainmap.getURLParams(); }openPopup('about:blank','Printview',20,200,765,620,'001000');"
+                                    accesskey="p"><img
+                                    class="icon"
+                                    src="/hafas-res/img/icon_print.gif"
+                                    width="14"
+                                    height="14"
+                                    alt=""/>
+                                    Print</a>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <input type="hidden" name="queryPageDisplayed" value="yes">
+                <input
+                    type="hidden"
+                    name="SetGlobalOptionGO_callMapFromPosition"
+                    value="tp_query_from">
+                <input type="hidden" name="REQMapTextFieldFrom" value="yes">
+                <input type="hidden" name="REQMapScaling" value="2000">
+                <input type="hidden" name="start" value="yes">
+                <table class="hafasQuery" cellspacing="0" summary="Start">
+                    <tr>
+                        <th>
+                            &nbsp;
+                        </th>
+                        <td class="tpQueryLocType" colspan="3">
+                            <input
+                                id="locType_from_1"
+                                type="radio"
+                                class="radio"
+                                checked="checked"
+                                name="REQ0JourneyStopsS0A"
+                                value="255"/>
+                            <label for="locType_from_1">All types</label><input
+                                id="locType_from_2"
+                                type="radio"
+                                class="radio"
+                                name="REQ0JourneyStopsS0A"
+                                value="1"/>
+                            <label for="locType_from_2">Station/Stop</label><input
+                                id="locType_from_3"
+                                type="radio"
+                                class="radio"
+                                name="REQ0JourneyStopsS0A"
+                                value="2"/>
+                            <label for="locType_from_3">City, Street Hno</label><input
+                                id="locType_from_4"
+                                type="radio"
+                                class="radio"
+                                name="REQ0JourneyStopsS0A"
+                                value="4"/>
+                            <label for="locType_from_4">Point of Interest</label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><img src="/hafas-res/img/bull.gif" width="13" height="8" alt=""/>
+                            <label for="from" accesskey="f">from:</label>
+                        </th>
+                        <td class="tpQueryLocName">
+                            <input
+                                autocomplete="off"
+                                id="from"
+                                class="HafasSuggest"
+                                type="text"
+                                name="REQ0JourneyStopsS0G"
+                                value=""
+                                maxlength="60"
+                                style="width:280px;"/>
+                            <input type="hidden" name="REQ0JourneyStopsS0ID" value=""/>
+                            <script type="text/javascript">
+                                <!--
+                                //
+                                -->
+                            </script>
+                        </td>
+                        <td class="tpQueryButtonMapInput">
+                            <input
+                                type="submit"
+                                class="button"
+                                name="performGis"
+                                value="Show in map"
+                                style="width: 90px;"
+                                accesskey="s"/>
+                        </td>
+                        <td class="tpQueryButtonVia1">
+                            &nbsp;
+                        </td>
+                    </tr>
+                </table>
+                <script type="text/javascript">
+                    var favHash = {
+                        "suggestions": [
+                            {
+                                "cookieval": true,
+                                "id": "A=1@O=Universität Mensa, Saarbrücken@X=7043740@Y=49256410@U=80@L=000010905@B=1@V" +
+                                        "=11.9,@p=1452187787@",
+                                "type": "1",
+                                "value": "Universität Mensa, Saarbrücken",
+                                "xcoord": "",
+                                "ycoord": ""
+                            }, {
+                                "cookieval": true,
+                                "id": "A=1@O=Waldhaus, Saarbrücken@X=7020701@Y=49246063@U=80@L=000010803@B=1@V=11.9,@p=" +
+                                        "1452187787@",
+                                "type": "1",
+                                "value": "Waldhaus, Saarbrücken",
+                                "xcoord": "",
+                                "ycoord": ""
+                            }, {
+                                "cookieval": true,
+                                "id": "A=1@O=Universität Busterminal, Saarbrücken@X=7047722@Y=49257731@U=80@L=000010909" +
+                                        "@B=1@V=11.9,@p=1449070243@",
+                                "type": "1",
+                                "value": "Universität Busterminal, Saarbrücken",
+                                "xcoord": "",
+                                "ycoord": ""
+                            }, {
+                                "cookieval": true,
+                                "id": "A=2@O=Saarbrücken - Burbach, Dr.-Tietz-Straße 13@X=6959358@Y=49237982@U=98@L=991" +
+                                        "084730@B=1@V=11.9,@p=1442568306@",
+                                "type": "2",
+                                "value": "Saarbrücken - Burbach, Dr.-Tietz-Straße 13",
+                                "xcoord": "",
+                                "ycoord": ""
+                            }, {
+                                "cookieval": true,
+                                "id": "A=1@O=Saarbrücken-Burbach@X=6957084@Y=49242171@U=80@L=008005243@B=1@V=11.9,@p=14" +
+                                        "46733407@",
+                                "type": "1",
+                                "value": "Saarbrücken-Burbach",
+                                "xcoord": "",
+                                "ycoord": ""
+                            }
+                        ]
+                    };
+                    // Koordinatenfix
+                    for (var i = 0; i < favHash.suggestions.length; i++) {
+                        favHash
+                            .suggestions[i]
+                            .id
+                            .match(/@X=(\d+)/)
+                        var x = RegExp.$1;
+                        favHash
+                            .suggestions[i]
+                            .id
+                            .match(/@Y=(\d+)/)
+                        var y = RegExp.$1;
+                        favHash.suggestions[i].xcoord = x;
+                        favHash.suggestions[i].ycoord = y;
+                    }
+                </script>
+                <div class="separatingLine" style="margin-top:15px;"><hr style="display:none;"/></div>
+                <script type="text/javascript">
+                    /* <![CDATA[ */
+                    gImagePath = '/hafas-res/img/';
+                    gJSMapImagePath = gImagePath + "js/";
+                    /* ]]> */
+                </script>
+                <div class="ajaxmapdiv" style="position:relative;">
+                    <div class="additionMapMenu" id="additionalMenu">
+                        <div style="clear:both;"></div>
+                        <div style="margin:0px;" class="mainMenuHolder">
+                            <div style="display:block" id="mapMenuContent" class="mapMenuContent">
+                                <script type="text/javascript">
+                                    /* <![CDATA[ */
+                                    gImagePath = '/hafas-res/img/';
+                                    gJSMapImagePath = gImagePath + "js/";
+                                    /* ]]> */
+                                </script>
+                                <script type='text/javascript'>
+                                    /* <![CDATA[ */
+                                    imap_content_checkbox_datamainmap = new Array();
+                                    imap_content_map_contentmainmap = new Array();
+                                    imap_station_memory = function () {
+                                        var station_array = new Hash();
+                                        var location_array = new Hash();
+                                        var currentStyle = "";
+                                        this.lastCount = 0;
+                                        this.addStation = function (id, x, y, type) {
+                                            station_array.set(id, {
+                                                type: type,
+                                                x: x,
+                                                y: y
+                                            });
+                                            location_array.set(type, id);
+                                        }
+                                        this.hasStation = function (x, y, type) {
+                                            return location_array
+                                                .keys()
+                                                .member(type);
+                                        }
+                                        this.getData = function (id) {
+                                            return station_array.get(id);
+                                        }
+                                        this.removeStation = function (id) {
+                                            var data = station_array.get(id);
+                                            location_array.remove(data.type);
+                                            station_array.remove(id);
+                                        }
+                                        this.getIdList = function () {
+                                            return station_array.keys();
+                                        }
+                                        this.isCurrentStyle = function (style) {
+                                            return currentStyle == style;
+                                        }
+                                        this.updateStyle = function (style) {
+                                            currentStyle = style;
+                                        }
+                                        this.clear = function () {
+                                            station_array = new Hash();
+                                            location_array = new Hash();
+                                        }
+                                    };
+                                    imap_get_bounding_box = function (map, lastCount) {
+                                        var bb = map.getBoundingBox();
+                                        if (lastCount > 200) 
+                                            return bb;
+                                        var h_range = (bb.ne.getLat() - bb.sw.getLat()) / 2;
+                                        var v_range = (bb.ne.getLon() - bb.sw.getLon()) / 2;
+                                        return {
+                                            ne: new CCoord({
+                                                lat: bb
+                                                    .ne
+                                                    .getLat() + h_range,
+                                                lon: bb
+                                                    .ne
+                                                    .getLon() + v_range
+                                            }),
+                                            sw: new CCoord({
+                                                lat: bb
+                                                    .sw
+                                                    .getLat() - h_range,
+                                                lon: bb
+                                                    .sw
+                                                    .getLon() - v_range
+                                            })
+                                        };
+                                    };
+                                    imap_content_checkbox_fireLocationRequestmainmap = function (idx, chboxdata, chboxcontent) {
+                                        params = chboxdata[idx];
+                                        params.idx = idx;
+                                        params.chboxdata = chboxdata;
+                                        params.chboxcontent = chboxcontent;
+                                        if (typeof Ajax == "undefined" || typeof Ajax.Request == "undefined") {
+                                            alert("Prototyp missing");
+                                            return;
+                                        }
+                                        if (typeof Ajax == "undefined" || typeof Ajax.Request == "undefined") {
+                                            alert("Prototyp missing");
+                                            return;
+                                        }
+                                        var currentMap = params.map;
+                                        var c = currentMap.getCenter();
+                                        if (typeof chboxcontent[idx] == 'undefined') 
+                                            var bb = imap_get_bounding_box(currentMap, 0);
+                                        else 
+                                            var bb = imap_get_bounding_box(currentMap, chboxcontent[idx].lastCount);
+                                        var url = params.url;
+                                        if (typeof params.zoomsteps != 'undefined') {
+                                            for (var i = 0; i < params.zoomsteps.length; i++) {
+                                                if (currentMap.getZoom() < params.zoomsteps[i].zoom) {
+                                                    url = params.zoomsteps[i].url;
+                                                }
+                                            }
+                                        }
+                                        if ((typeof chboxdata[idx].type != 'undefined') && (chboxdata[idx].type == 'center')) {
+                                            url += "&look_x=" + currentMap
+                                                .getCenter()
+                                                .getLon() + "&look_y=" + currentMap
+                                                .getCenter()
+                                                .getLat() + "&look_maxdist=2000&maxno=40";
+                                        } else {
+                                            url += "&look_maxx=" + bb
+                                                .ne
+                                                .getLon() + "&look_maxy=" + bb
+                                                .ne
+                                                .getLat() + "&look_minx=" + bb
+                                                .sw
+                                                .getLon() + "&look_miny=" + bb
+                                                .sw
+                                                .getLat();
+                                        }
+                                        var request = new Ajax.Request(url, {
+                                            method: 'get',
+                                            onComplete: imap_content_checkbox_handleLoad.bind(params)
+                                        });
+                                    };
+                                    imap_delete_content = function (idx, chboxcontent, map) {
+                                        if (typeof chboxcontent[idx] != 'undefined') {
+                                            var id_list = chboxcontent[idx].getIdList();
+                                            for (var i = id_list.length - 1; i >= 0; i--) {
+                                                map.hideContent(id_list[i]);
+                                                map.removeContent(id_list[i]);
+                                            }
+                                            chboxcontent[idx].clear();
+                                        }
+                                    };
+                                    imap_update_content = function (idx, chboxcontent, chboxdata) {
+                                        try {
+                                            if (typeof chboxcontent[idx] != 'undefined') {
+                                                var bb = imap_get_bounding_box(chboxdata[idx].map, chboxcontent[idx].lastCount);
+                                                var id_list = chboxcontent[idx].getIdList();
+                                                for (var i = id_list.length - 1; i >= 0; i--) {
+                                                    var data = chboxcontent[idx].getData(id_list[i]);
+                                                    if (!((bb.ne.getLat() > data.y) && (bb.sw.getLat() < data.y) && (bb.ne.getLon() > data.x) && (bb.sw.getLon() < data.x) && chboxdata[idx].map.getZoom() < chboxdata[idx].minzoom)) {
+                                                        chboxdata[idx]
+                                                            .map
+                                                            .hideContent(id_list[i]);
+                                                        chboxdata[idx]
+                                                            .map
+                                                            .removeContent(id_list[i]);
+                                                        chboxcontent[idx].removeStation(id_list[i]);
+                                                    }
+                                                }
+                                            }
+                                        } catch (e) {
+                                            alert(e);
+                                        }
+                                    };
+                                    imap_map_onchange = function (idx, chboxdata, chboxcontent) {
+                                        if (typeof chboxdata[idx] != 'undefined') {
+                                            if (chboxdata[idx].map.getZoom() < chboxdata[idx].minzoom) {
+                                                if ((chboxdata[idx].state == 'checked') || (chboxdata[idx].state == 'checkeddisabled')) {
+                                                    imap_update_content(idx, chboxcontent, chboxdata);
+                                                    imap_content_checkbox_fireLocationRequestmainmap(idx, chboxdata, chboxcontent);
+                                                    imap_content_checkbox_setstate(idx, 'checked', chboxdata);
+                                                } else if (chboxdata[idx].state == 'disabled') {
+                                                    imap_content_checkbox_setstate(idx, 'unchecked', chboxdata);
+                                                    imap_map_onchange(0, chboxdata, chboxcontent);
+                                                }
+                                            } else {
+                                                if (chboxdata[idx].state == 'checked') 
+                                                    imap_delete_content(idx, chboxcontent, chboxdata[idx].map);
+                                                if (chboxdata[idx].state == 'checked') {
+                                                    imap_content_checkbox_setstate(idx, 'checkeddisabled', chboxdata);
+                                                } else {
+                                                    if (chboxdata[idx].state != 'checkeddisabled') {
+                                                        imap_content_checkbox_setstate(idx, 'disabled', chboxdata);
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    };
+                                    imap_content_checkbox_clone_contentparams = function (par) {
+                                        var ret = Object.clone(par);
+                                        if (typeof par.coord != 'undefined') 
+                                            ret.coord = par.coord.clone();
+                                        if (typeof par.hotspot != 'undefined') 
+                                            ret.hotspot = {
+                                                x: par.hotspot.x,
+                                                y: par.hotspot.y
+                                            };
+                                        if (typeof par.coords != 'undefined') {
+                                            ret.coords = new Array;
+                                            for (var i = 0; i < par.coords.length; i++) 
+                                                ret.coords[i] = par.coords[i].clone();
+                                            }
+                                        return ret;
+                                    };
+                                    imap_content_checkbox_decode = function (at) {
+                                        var t = at.replace(/&ouml;/g, '&#195;&#182;');
+                                        t = t.replace(/&auml;/g, '&#195;&#164;');
+                                        t = t.replace(/&uuml;/g, '&#195;&#188;');
+                                        t = t.replace(/&Auml;/g, '&#195;&#132;');
+                                        t = t.replace(/&Uuml;/g, '&#195;&#156;');
+                                        t = t.replace(/&Ouml;/g, '&#195;&#150;');
+                                        t = t.replace(/&#252;/g, '&#195;&#188;');
+                                        t = t.replace(/&#246;/g, '&#195;&#182;');
+                                        t = t.replace(/&#228;/g, '&#195;&#164;');
+                                        t = t.replace(/&#226;/g, '&#195;&#162;');
+                                        t = t.replace(/&#223;/g, '&#195;&#159;');
+                                        t = t.replace(/&#196;/g, '&#195;&#132;');
+                                        t = t.replace(/&#214;/g, '&#195;&#150;');
+                                        t = t.replace(/&#220;/g, '&#195;&#156;');
+                                        t = t.replace(/&#248;/g, '&#195;&#184;');
+                                        t = t.replace(/&#216;/g, '&#195;&#152;');
+                                        t = t.replace(/&#229;/g, '&#195;&#165;');
+                                        t = t.replace(/&#197;/g, '&#195;&#133;');
+                                        t = t.replace(/&#230;/g, '&#195;&#166;');
+                                        t = t.replace(/&#198;/g, '&#195;&#134;');
+                                        t = t.replace(/&#233;/g, '&#195;&#169;');
+                                        t = t.replace(/&#232;/g, '&#195;&#168;');
+                                        t = t.replace(/&#156;/g, '&#197;&#147;');
+                                        t = t.replace(/&#140;/g, '&#197;&#146;');
+                                        return t;
+                                    };
+                                    imap_get_template_zoom_level = function (template, z) {
+                                        var i = 0;
+                                        while (i < template.length - 1) {
+                                            if (z < template[i + 1].minzoom) 
+                                                break;
+                                            i++;
+                                        }
+                                        return i;
+                                    };
+                                    imap_content_checkbox_getLocationParams = function (template, text, z, x, y) {
+                                        var i = imap_get_template_zoom_level(template, z);
+                                        var p = imap_content_checkbox_clone_contentparams(template[i]);
+                                        p.imageurl = template[i].imageurl;
+                                        if (typeof template[i].shadowurl != 'undefined') 
+                                            p.shadowurl = template[i].shadowurl;
+                                        p.text = text;
+                                        p.coord = new CCoord({lat: y, lon: x});
+                                        p.type = 'location';
+                                        p.flexible = false;
+                                        return p;
+                                    };
+                                    imap_content_checkbox_handleLoad = function (json) {
+                                        var params = this;
+                                        if (typeof params == 'undefined' || params == null) {
+                                            alert("No parameter available");
+                                            return;
+                                        }
+                                        var map = params.map;
+                                        if (typeof map == "undefined" || map == null) {
+                                            alert("No Map available");
+                                            return;
+                                        }
+                                        if (typeof params.location == 'undefined') {
+                                            alert("No location Template available");
+                                            return;
+                                        }
+                                        var res = eval('(' + json.responseText + ')');
+                                        if ((typeof res.error != 'undefined') && (res.error == "0")) {
+                                            if ((typeof res.stops != "undefined")) {
+                                                var stops = res.stops;
+                                                var zoom = map.getZoom();
+                                                //    var zoomstep=(zoom<2000?0:(zoom<50000?1:2));
+                                                if (typeof params.chboxcontent[params.idx] == 'undefined') {
+                                                    params.chboxcontent[params.idx] = new imap_station_memory();
+                                                }
+                                                params.chboxcontent[params.idx].lastCount = stops.length;
+                                                var zoomLevel = imap_get_template_zoom_level(params.location, map.getZoom());
+                                                if (!params.chboxcontent[params.idx].isCurrentStyle(zoomLevel)) {
+                                                    imap_delete_content(params.idx, params.chboxcontent, map)
+                                                    params
+                                                        .chboxcontent[params.idx]
+                                                        .updateStyle(zoomLevel);
+                                                }
+                                                for (var i = 0; i < stops.length; i++) {
+                                                    var s = stops[i];
+                                                    if (params.chboxcontent[params.idx].hasStation(s.x, s.y, s.extId)) 
+                                                        continue;
+                                                    s.name = imap_content_checkbox_decode(s.name);
+                                                    var p = imap_content_checkbox_getLocationParams(params.location, s.name, zoom, s.x, s.y);
+                                                    /* Overwrite Symbol Stations & Busstops */
+                                                    var typeOfStation = parseInt(parseInt(s.extId) / 100000)
+                                                    if (typeOfStation == 80) {
+                                                        var stationImageUrl = '/hafas-res/img/look/prod_ic.gif';
+                                                    } else {
+                                                        var stationImageUrl = '/hafas-res/img/stop.gif';
+                                                    }
+                                                    p.imageurl = stationImageUrl;
+                                                    /* Defining right function for click actions FOR NOW default func */
+                                                    var handler = {
+                                                        call: function () {
+                                                            this
+                                                                .map
+                                                                .showInfoboxGeo(this.geo, this.name, infotextstation({extId: this.extId, map: this.map, name: this.name, x: this.x, y: this.y}));
+                                                        },
+                                                        extId: s.extId,
+                                                        geo: new CCoord({x: s.x, y: s.y}),
+                                                        map: map,
+                                                        name: s.name,
+                                                        x: s.x,
+                                                        y: s.y
+                                                    };
+                                                    p.onclick = handler
+                                                        .call
+                                                        .bind(handler);
+                                                    var l = map.createContent(p);
+                                                    params
+                                                        .chboxcontent[params.idx]
+                                                        .addStation(l, s.x, s.y, s.extId);
+                                                    map.showContent(l);
+                                                    var commaPos = stops[i]
+                                                        .name
+                                                        .indexOf(',');
+                                                    if (commaPos != -1) {
+                                                        var stop = stops[i]
+                                                            .name
+                                                            .substr(0, commaPos);
+                                                    } else {
+                                                        var stop = stops[i].name;
+                                                    }
+                                                    var containerLabel = map.createContent({
+                                                        coord: new CCoord({x: s.x, y: s.y}),
+                                                        hotspot: {
+                                                            x: -9,
+                                                            y: 8
+                                                        },
+                                                        html: '<div style="font-size:11px;background-color:white;opacity:0.8;filter:alpha(opaci' +
+                                                                'ty=80);">' + stop + '</div>',
+                                                        type: 'container'
+                                                    });
+                                                    map.showContent(containerLabel);
+                                                    params
+                                                        .chboxcontent[params.idx]
+                                                        .addStation(containerLabel, s.x, s.y, s.extId);
+                                                }
+                                            } else if ((typeof res.pois != 'undefined') && (typeof res.poiType == 'undefined')) {
+                                                var pois = res.pois;
+                                                var zoom = map.getZoom();
+                                                for (var i = 0; i < pois.length; i++) {
+                                                    var p = pois[i];
+                                                    var extId = p.extId;
+                                                    p.name = imap_content_checkbox_decode(p.name);
+                                                    var p = imap_content_checkbox_getLocationParams(params.location, p.name, zoom, p.x, p.y);
+                                                    p.infotitle = p.text;
+                                                    p.infocontent = infotextpoi({extId: extId, map: map, name: p.text, x: p.x, y: p.y});
+                                                    var l = map.createContent(p);
+                                                    if (typeof params.chboxcontent[params.idx] == 'undefined') {
+                                                        params.chboxcontent[params.idx] = new imap_station_memory();
+                                                    }
+                                                    params
+                                                        .chboxcontent[params.idx]
+                                                        .addStation(l, p.x, p.y, -1);
+                                                    map.showContent(l)// SOndercase f&#195;&#131;&#194;&#188;r HRS Hotels;
+                                                }
+                                            } else {
+                                                if (typeof res.pois != 'undefined') {
+                                                    var pois = res.pois;
+                                                    var zoom = map.getZoom();
+                                                    for (var i = 0; i < pois.length; i++) {
+                                                        var p = pois[i];
+                                                        p.name = imap_content_checkbox_decode(p.name);
+                                                        try {
+                                                            var p = imap_content_checkbox_getLocationParams(params.location, p.name, zoom, p.x, p.y);
+                                                        } catch (e) {
+                                                            alert(e);
+                                                        }
+                                                        p.infotitle = p.text;
+                                                        var freeservices = null;
+                                                        if (typeof pois[i].hrsFreeServices != 'undefined') {
+                                                            var freeservices = pois[i].hrsFreeServices;
+                                                        }
+                                                        p.infocontent = infotexthrs({
+                                                            bookingUrl: pois[i].hrsBookingUrl,
+                                                            city: pois[i].city,
+                                                            map: map,
+                                                            mediaUrl: pois[i].mediaUrl,
+                                                            name: p.text,
+                                                            plz: pois[i].plz,
+                                                            price: pois[i].hrsMinPrice,
+                                                            services: freeservices,
+                                                            stars: pois[i].hrsCategory,
+                                                            street: pois[i].street,
+                                                            x: pois[i].x,
+                                                            y: pois[i].y
+                                                        });
+                                                        var l = map.createContent(p);
+                                                        if (typeof params.chboxcontent[params.idx] == 'undefined') {
+                                                            params.chboxcontent[params.idx] = new imap_station_memory();
+                                                        }
+                                                        params
+                                                            .chboxcontent[params.idx]
+                                                            .addStation(l, p.x, p.y, -1);
+                                                        map.showContent(l);
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        ccc = params.chboxcontent;
+                                        imap_content_checkbox_setstate(params.idx, "checked", params.chboxdata);
+                                    };
+                                    imap_content_checkbox_setstate = function (idx, newstate, chboxdata) {
+                                        switch (newstate) {
+                                            case "checked":
+                                                chboxdata[idx].img.src = chboxdata[idx].checkbox_checked;
+                                                if (document.getElementById(chboxdata[idx].divname + 'mainmap' + idx) != null) 
+                                                    document.getElementById(chboxdata[idx].divname + 'mainmap' + idx).style.opacity = '1.0';
+                                                break;
+                                            case "unchecked":
+                                                chboxdata[idx].img.src = chboxdata[idx].checkbox_unchecked;
+                                                if (document.getElementById(chboxdata[idx].divname + 'mainmap' + idx) != null) 
+                                                    document.getElementById(chboxdata[idx].divname + 'mainmap' + idx).style.opacity = '1.0';
+                                                break;
+                                            case "wait":
+                                                chboxdata[idx].img.src = chboxdata[idx].checkbox_wait;
+                                                if (document.getElementById(chboxdata[idx].divname + 'mainmap' + idx) != null) 
+                                                    document.getElementById(chboxdata[idx].divname + 'mainmap' + idx).style.opacity = '1.0';
+                                                break;
+                                            case "disabled":
+                                                chboxdata[idx].img.src = chboxdata[idx].checkbox_disabled;
+                                                if (document.getElementById(chboxdata[idx].divname + 'mainmap' + idx) != null) 
+                                                    document.getElementById(chboxdata[idx].divname + 'mainmap' + idx).style.opacity = '0.3';
+                                                break;
+                                            case "checkeddisabled":
+                                                chboxdata[idx].img.src = chboxdata[idx].checkbox_checkeddisabled;
+                                                if (document.getElementById(chboxdata[idx].divname + 'mainmap' + idx) != null) 
+                                                    document.getElementById(chboxdata[idx].divname + 'mainmap' + idx).style.opacity = '0.3';
+                                                break;
+                                        }
+                                        chboxdata[idx].state = newstate
+                                    };
+                                    imap_content_checkbox_click = function (idx, chboxdata, chboxcontent) {
+                                        var oldState = chboxdata[idx].state;
+                                        if (oldState == "unchecked" || oldState == "not specified") {
+                                            imap_content_checkbox_setstate(idx, "wait", chboxdata);
+                                            imap_content_checkbox_fireLocationRequestmainmap(idx, chboxdata, chboxcontent);
+                                        } else if (oldState == "checked") {
+                                            imap_delete_content(idx, chboxcontent, chboxdata[idx].map);
+                                            imap_content_checkbox_setstate(idx, "unchecked", chboxdata);
+                                        }
+                                    };
+                                    imap_content_checkbox_update = function (idx) {};
+                                    /* ]]> */
+                                </script>
+                                <script type='text/javascript'>
+                                    /* <![CDATA[ */
+                                    if (typeof Map_mainmap_InitFunctions == "undefined") 
+                                        Map_mainmap_InitFunctions = new Array;
+                                    Map_mainmap_InitFunctions[Map_mainmap_InitFunctions.length++] = function () {
+                                        var i = document.getElementById("Mapmenue_img__1mainmap0");
+                                        if (typeof imap_content_checkbox_datamainmap == 'undefined') 
+                                            imap_content_checkbox_datamainmap = new Array();
+                                        if (typeof imap_content_map_contentmainmap == 'undefined') 
+                                            imap_content_map_contentmainmap = new Array();
+                                        imap_content_checkbox_datamainmap[0] = {
+                                            checkbox_checked: '/hafas-res/img/js/chbox_checked.png',
+                                            checkbox_checkeddisabled: '/hafas-res/img/js/chbox_checkeddisabled.png',
+                                            checkbox_disabled: '/hafas-res/img/js/chbox_disabled.png',
+                                            checkbox_unchecked: '/hafas-res/img/js/chbox_unchecked.png',
+                                            checkbox_wait: '/hafas-res/img/js/chbox_disabled.png',
+                                            divname: 'Mapmenue_div__1',
+                                            img: i,
+                                            location: [
+                                                {
+                                                    alt: "",
+                                                    hotspot: {
+                                                        x: 8,
+                                                        y: 8
+                                                    },
+                                                    imageheight: 16,
+                                                    imageurl: '/hafas-res/img/selected_location.gif',
+                                                    imagewidth: 16,
+                                                    minzoom: 0
+                                                }, {
+                                                    alt: "",
+                                                    hotspot: {
+                                                        x: 8,
+                                                        y: 8
+                                                    },
+                                                    imageheight: 16,
+                                                    imageurl: '/hafas-res/img/selected_location.gif',
+                                                    imagewidth: 16,
+                                                    minzoom: 20000
+                                                }, {
+                                                    alt: "",
+                                                    hotspot: {
+                                                        x: 8,
+                                                        y: 8
+                                                    },
+                                                    imageheight: 16,
+                                                    imageurl: '/hafas-res/img/selected_location.gif',
+                                                    imagewidth: 16,
+                                                    minzoom: 100000
+                                                }, {
+                                                    alt: "",
+                                                    hotspot: {
+                                                        x: 8,
+                                                        y: 8
+                                                    },
+                                                    imageheight: 16,
+                                                    imageurl: '/hafas-res/img/selected_location.gif',
+                                                    imagewidth: 16,
+                                                    minzoom: 600000
+                                                }
+                                            ],
+                                            map: Map_mainmap,
+                                            minzoom: 5000,
+                                            state: 'checkeddisabled',
+                                            type: '',
+                                            url: 'http://www.saarfahrplan.de/cgi-bin/query.exe/eny?performLocating=2&tpl=stop2json' +
+                                                    '&look_maxno=150&look_nv=get_stopweight|yes|selectable|yes|&look_maxdist=2088642&' +
+                                                    'look_stopclass=2047&'
+                                        }
+                                        i.onclick = function () {
+                                            imap_content_checkbox_click(0, imap_content_checkbox_datamainmap, imap_content_map_contentmainmap)
+                                        };
+                                        i.src = "/hafas-res/img/js/chbox_checkeddisabled.png";
+                                        imap_map_onchange(0, imap_content_checkbox_datamainmap, imap_content_map_contentmainmap);
+                                        // OnChange Handler setzen
+                                        Map_mainmap.setOnChange(function () {
+                                            imap_map_onchange(0, imap_content_checkbox_datamainmap, imap_content_map_contentmainmap);
+                                        });
+                                    }
+                                    /* ]]> */
+                                </script>
+                                <div id="Mapmenue_div__1mainmap0" class="colicon">
+                                    <img
+                                        id="Mapmenue_img__1mainmap0"
+                                        align="middle"
+                                        height="13"
+                                        width="13"
+                                        src="/hafas-res/img/js/chbox_disabled.png"
+                                        alt=""
+                                        title=""/>
+                                    <span id="Mapmenue_img__1mainmap0_title">Haltestellen</span>
+                                </div>
+                                <script type="text/javascript">
+                                    /* <![CDATA[ */
+                                    document
+                                        .getElementById('Mapmenue_img__1mainmap0_title')
+                                        .onclick = function () {
+                                        imap_content_checkbox_datamainmap[0]
+                                            .img
+                                            .onclick();
+                                    };
+                                    /* ]]> */
+                                </script>
+                            </div>
+                        </div>
+                    </div>
+                    <script type="text/javascript">
+                        /* <![CDATA[ */
+                        openLayerMenu = function (menu) {
+                            var displayStatus = eID('mapMenu' + menu + 'Content').style.display;
+                            // % Stop Men&#252; schliessen
+                            eID('mapMenuContent').style.display = 'none';
+                            eID('Menu').className = 'routeMapMenuSlider';
+                            // % POI Men&#252; schliessen
+                            // % Map
+                            if (displayStatus == 'none') {
+                                eID('mapMenu' + menu + 'Content').style.display = 'block';
+                                eID(menu + 'Menu').className = 'routeMapMenuSliderActive';
+                            } else {
+                                eID('mapMenu' + menu + 'Content').style.display = 'none';
+                                eID(menu + 'Menu').className = 'routeMapMenuSlider';
+                            }
+                        }
+                        switchLayer = function (switchdivid, layerdesc) {
+                            var s = document.getElementById(switchdivid + "");
+                            if (s.className == 'jmap_menue_content_check') {
+                                s.className = 'jmap_menue_content_checkwait';
+                                Map_mainmap.addTileLayer(layerdesc);
+                                s.className = 'jmap_menue_content_checked';
+                            } else {
+                                s.className = 'jmap_menue_content_checkwait';
+                                Map_mainmap.removeTileLayer(layerdesc.id);
+                                s.className = 'jmap_menue_content_check';
+                            }
+                        }
+                        toggleHIMMessages = function (type, boolval) {
+                            var aUrl = "http://www.saarfahrplan.detpl=him2json&type=" + type + "&";
+                            if (typeof HIMIconArr[type] == 'undefined') 
+                                HIMIconArr[type] = new Array();
+                            if (boolval) {
+                                new Ajax.Request(aUrl, {
+                                    onFailure: function () {},
+                                    onSuccess: function (o) {
+                                        var obj = eval('(' + o.responseText + ')');
+                                        var icon = '';
+                                        switch (type) {
+                                            case 0:
+                                                icon = "/hafas-res/img/him/icon_replace.gif";
+                                                break;
+                                            case 1:
+                                                icon = "/hafas-res/img/him/icon_work.gif";
+                                                break;
+                                            case 2:
+                                                icon = "/hafas-res/img/him/icon_cancel.gif";
+                                                break;
+                                            case 3:
+                                                icon = "/hafas-res/img/him/icon_critical.gif";
+                                                break;
+                                            case 4:
+                                                icon = "/hafas-res/img/him/icon_info2.gif";
+                                                break;
+                                            case 5:
+                                                icon = "/hafas-res/img/him/icon_urgent_static_small.gif";
+                                                break;
+                                        }
+                                        for (var i = 0; i < obj.him.length; i++) {
+                                            var tmpContent = Map_mainmap.createContent({
+                                                coord: new CCoord({lat: obj.him[i].y, lon: obj.him[i].x}),
+                                                hotspot: {
+                                                    x: 7,
+                                                    y: 7
+                                                },
+                                                imageheight: 15,
+                                                imageurl: icon,
+                                                imagewidth: 15,
+                                                text: obj.him[i].text,
+                                                type: 'location'
+                                            });
+                                            Map_mainmap.showContent(tmpContent);
+                                            HIMIconArr[type].push(tmpContent)
+                                        }
+                                    }
+                                });
+                            } else {
+                                if (typeof HIMIconArr[type] != 'undefined') {
+                                    for (var j = HIMIconArr[type].length - 1; j >= 0; j--) {
+                                        Map_mainmap.hideContent(HIMIconArr[type][j]);
+                                        Map_mainmap.removeContent(HIMIconArr[type][j]);
+                                        HIMIconArr[type].pop();
+                                    }
+                                }
+                            }
+                        }
+                        /* ]]> */
+                    </script>
+                    <div
+                        id="MapDiv_mainmap"
+                        style="position:relative;left:0;top:0;width:980;height:500px;"></div>
+                </div>
+                <script type='text/javascript'>
+                    /* <![CDATA[ */
+                    var Map;
+                    var ConnMap = null;
+                    var ConnMapA = null;
+                    var ConnMapB = null;
+                    var ConnStartDesc = null;
+                    var ConnDestDesc = null;
+                    var ConnRouteDesc = null;
+                    var MapCenter = "";
+                    var mapTexts = new Hash({
+                        approx: "approx.",
+                        caption: [
+                            "Your footpath",
+                            "Your bike route",
+                            "Your car route",
+                            "Your car route",
+                            "Your taxi route",
+                            "Your taxi route"
+                        ],
+                        CHANGE_HIGHWAY: "",
+                        direction: "Direction",
+                        distance: "Distance",
+                        duration: "Duration",
+                        ENTER: "",
+                        ENTER_FERRY: "",
+                        ENTER_ROUNDABOUT: "",
+                        FROM: "",
+                        HALF_LEFT: "",
+                        HALF_RIGHT: "",
+                        hideTexts: [
+                            "",
+                            "",
+                            "",
+                            "",
+                            "",
+                            ""
+                        ],
+                        KEEP_HALF_LEFT: "",
+                        KEEP_HALF_RIGHT: "",
+                        KEEP_LEFT: "",
+                        KEEP_RIGHT: "",
+                        KEEP_SHARP_LEFT: "",
+                        KEEP_SHARP_RIGHT: "",
+                        LEAVE: "",
+                        LEAVE_FERRY: "",
+                        LEAVE_ROUNDABOUT: "",
+                        LEFT: "",
+                        minutes: "min.",
+                        ON: "",
+                        RIGHT: "",
+                        SHARP_LEFT: "",
+                        SHARP_RIGHT: "",
+                        STAY_IN_ROUNDABOUT: "",
+                        STRAIGHT: "",
+                        street: "Street",
+                        TO: "",
+                        UNKNOWN: "",
+                        UTURN: ""
+                    })
+                    var mapIcons = new Hash({
+                        CHANGE_HIGHWAY: '',
+                        ENTER: '',
+                        ENTER_FERRY: '',
+                        ENTER_ROUNDABOUT: '',
+                        FROM: '',
+                        HALF_LEFT: '',
+                        HALF_RIGHT: '',
+                        KEEP_HALF_LEFT: '',
+                        KEEP_HALF_RIGHT: '',
+                        KEEP_LEFT: '',
+                        KEEP_RIGHT: '',
+                        KEEP_SHARP_LEFT: '',
+                        KEEP_SHARP_RIGHT: '',
+                        LEAVE: '',
+                        LEAVE_FERRY: '',
+                        LEAVE_ROUNDABOUT: '',
+                        LEFT: '',
+                        ON: '',
+                        RIGHT: '',
+                        SHARP_LEFT: '',
+                        SHARP_RIGHT: '',
+                        STAY_IN_ROUNDABOUT: '',
+                        STRAIGHT: '',
+                        TO: '',
+                        UNKNOWN: '',
+                        UTURN: ''
+                    })
+                    var mapDescription = Class.create();
+                    mapDescription.prototype = {
+                        draw: function () {
+                            var textRoute = '<table class="MapRouteDesc" cellspacing="0">';
+                            for (var n = 0; n < this.dataObj.Segment.length; n++) {
+                                var coordId = this.dataObj.Segment[n].PolyStart;
+                                var coordX = this.polyObj[coordId].x;
+                                var coordY = this.polyObj[coordId].y;
+                                textRoute += "<tr>";
+                                var currentManoeuvre = (this.dataObj.Segment[n].Manoeuvre == '')
+                                    ? 'UNKNOWN'
+                                    : this.dataObj.Segment[n].Manoeuvre;
+                                textRoute += "<td class=\"center directionArrow\"><a href=\"javascript:;\" onclick=\"connMapAr" +
+                                        "ray[''].centerSingleCoordinate(new CCoord({lon:" + coordX + ",lat:" + coordY + "}));\" title=\"" + this.dataObj.Segment[n].ManoeuvreText + "\">" + mapIcons[currentManoeuvre] + "</a></td><td><a href=\"javascript:;\" onclick=\"connMapArray[''].centerSingleCoo" +
+                                        "rdinate(new CCoord({lon:" + coordX + ",lat:" + coordY + "}));\" title=\"" + this.dataObj.Segment[n].ManoeuvreText + "\">" + this.dataObj.Segment[n].Name + "</a></td><td class=\"distance\">" + this.dataObj.Segment[n].Distance + " m</td>";
+                                textRoute += "</tr>";
+                            }
+                            textRoute += "</table>";
+                            textRoute += '<div id="routeDescEnd_hideLink" class="routeDescShowHideLink"><b><a href="javasc' +
+                                    'ript:' + this.descLocationLink + 'Desc[\'\'].hide();">- ' + mapTexts['hideTexts'][this.descType] + '</a></b></div>';
+                            document
+                                .getElementById(this.descContainerId)
+                                .innerHTML = textRoute;
+                        },
+                        error: function () {},
+                        getTime: function (duration) {
+                            var minutes = parseInt(duration / 60);
+                            var hours = parseInt(minutes / 60);
+                            if (hours == 0) 
+                                return minutes + "&nbsp;" + mapTexts['minutes'];
+                            else 
+                                return (minutes < 10)
+                                    ? hours + ":0" + minutes + " h"
+                                    : hours + ":" + minutes + " h";
+                            }
+                        ,
+                        hide: function () {
+                            document
+                                .getElementById(this.descContainerId)
+                                .style
+                                .display = "none";
+                            document
+                                .getElementById(this.descContainerId + "_showLink")
+                                .style
+                                .display = "";
+                        },
+                        initialize: function (paramObj) {
+                            this.dataObj = paramObj.data;
+                            this.polyObj = paramObj.polyline; // object contains coordinates
+                            this.descContainerId = "routeDesc" + paramObj.loc + "";/* start/end */
+                            this.descLocation = paramObj.loc;
+                            switch (this.descLocation) {
+                                case 'Start':
+                                    this.descLocationLink = 'start';
+                                    break;
+                                case 'End':
+                                    this.descLocationLink = 'dest';
+                                    break;
+                                default:
+                                    this.descLocationLink = 'route';
+                                    break;
+                            }
+                            this.descType = paramObj.type;/* PKW RAD Fu&#223; ;-) */
+                            this.startIcon = '<img style="vertical-align:center" src="/hafas-res/img/js/CHafasConnectionMap/' + (this.dataObj.startLocType).toLowerCase() + '.gif" alt="' + this.dataObj.startLoc + '" title="' + this.dataObj.startLoc + '">';
+                            this.destIcon = '<img style="vertical-align:center" src="/hafas-res/img/js/CHafasConnectionMap/' + (this.dataObj.destLocType).toLowerCase() + '.gif" alt="' + this.dataObj.destLoc + '" title="' + this.dataObj.destLoc + '">';
+                            this.draw();
+                        },
+                        roundDistance: function (dis) {
+                            if (dis < 500) /* Distance is < 500 m -> rounded with a precision of 10 m */
+                                return mapTexts['approx'] + "&nbsp;" + Math.round(dis / 10) * 10 + "&nbsp;m";
+                            else {
+                                var currentDistanceTemp = Math.round(dis / 100) * 100;
+                                if (dis < 10000) /* Distance is < 10000 m  -> rounded with a precision of 100 m*/
+                                    return mapTexts['approx'] + "&nbsp;" + parseInt(currentDistanceTemp / 1000) + "," + (currentDistanceTemp % 1000) / 100 + "&nbsp;km";
+                                else 
+                                    return mapTexts['approx'] + "&nbsp;" + parseInt(currentDistanceTemp / 1000) + "&nbsp;km";
+                                }
+                            },
+                        show: function () {
+                            document
+                                .getElementById(this.descContainerId)
+                                .style
+                                .display = "";
+                            document
+                                .getElementById(this.descContainerId + "_showLink")
+                                .style
+                                .display = "none";
+                        }
+                    }
+                    function handleMapPolyStartAjaxResult_mainmap(r) {
+                        var conn = eval('(' + r.responseText + ')');
+                        ConnStartDesc = conn.sections[0].routedesc;
+                        ConnMapA = new CHafasConnectionMap(Map_mainmap, conn, {
+                            showGisRouteType0: true,
+                            stationboardurl: 'http://www.saarfahrplan.de/cgi-bin/stboard.exe/en?seqnr=1&ident=5q.01660710.1452' +
+                                    '561227&',
+                            tArrival: "",
+                            tDeparture: "",
+                            tDestination: "",
+                            travelplannerurl: 'http://www.saarfahrplan.de/cgi-bin/query.exe/en?',
+                            tStart: "",
+                            ttArrival: "",
+                            ttDeparture: "",
+                            ttDestination: "Choose as destination",
+                            ttStart: "Choose as start"
+                        });
+                        ConnMapA.show();
+                        connMapArray["S"] = ConnMapA;
+                        if (typeof startDesc == 'undefined') {
+                            startDesc = new Array();
+                        }
+                        startDesc[""] = new mapDescription({data: ConnStartDesc, loc: 'Start', polyline: conn.sections[0].polyline, type: conn.sections[0].gisRouteType});
+                        startDesc[""].hide();
+                        if (conn.MapCenter == "START") {
+                            ConnMapA.centerRoute();
+                            startDesc[""].show();
+                        }
+                    }
+                    function handleMapPolyEndAjaxResult_mainmap(r) {
+                        var conn = eval('(' + r.responseText + ')');
+                        ConnDestDesc = conn.sections[0].routedesc;
+                        ConnMapB = new CHafasConnectionMap(Map_mainmap, conn, {
+                            showGisRouteType0: true,
+                            stationboardurl: 'http://www.saarfahrplan.de/cgi-bin/stboard.exe/en?seqnr=1&ident=5q.01660710.1452' +
+                                    '561227&',
+                            tArrival: "",
+                            tDeparture: "",
+                            tDestination: "",
+                            travelplannerurl: 'http://www.saarfahrplan.de/cgi-bin/query.exe/en?',
+                            tStart: "",
+                            ttArrival: "",
+                            ttDeparture: "",
+                            ttDestination: "Choose as destination",
+                            ttStart: "Choose as start"
+                        });
+                        ConnMapB.show();
+                        connMapArray["E"] = ConnMapB;
+                        if (typeof destDesc == 'undefined') {
+                            destDesc = new Array();
+                        }
+                        destDesc[""] = new mapDescription({data: ConnDestDesc, loc: 'End', polyline: conn.sections[0].polyline, type: conn.sections[0].gisRouteType});
+                        destDesc[""].hide();
+                        if (conn.MapCenter == "END") {
+                            ConnMapB.centerRoute();
+                            destDesc[""].show();
+                        }
+                    }
+                    function handleMapPolyRouteAjaxResult_mainmap(r) {
+                        var conn = eval('(' + r.responseText + ')');
+                        ConnRouteDesc = conn.sections[0].routedesc;
+                        ConnMapRoute = new CHafasConnectionMap(Map_mainmap, conn, {
+                            showGisRouteType0: true,
+                            stationboardurl: 'http://www.saarfahrplan.de/cgi-bin/stboard.exe/en?seqnr=1&ident=5q.01660710.1452' +
+                                    '561227&',
+                            tArrival: "",
+                            tDeparture: "",
+                            tDestination: "",
+                            travelplannerurl: 'http://www.saarfahrplan.de/cgi-bin/query.exe/en?',
+                            tStart: "",
+                            ttArrival: "",
+                            ttDeparture: "",
+                            ttDestination: "Choose as destination",
+                            ttStart: "Choose as start"
+                        });
+                        ConnMapRoute.show();
+                        if (typeof routeDesc == 'undefined') {
+                            routeDesc = new Array();
+                        }
+                        routeDesc[""] = new mapDescription({data: ConnRouteDesc, loc: 'Route', polyline: conn.sections[0].polyline, type: conn.sections[0].gisRouteType});
+                        routeDesc[""].hide();
+                        if (conn.MapCenter == "ROUTE") {
+                            ConnMap.centerRoute();
+                            routeDesc[""].show();
+                        }
+                    }
+                    if (typeof Map_mainmap_InitFunctions == "undefined") 
+                        Map_mainmap_InitFunctions = new Array;
+                    if (typeof connMapArray == "undefined") 
+                        connMapArray = new Array;
+                    initCHafasConnection_mainmap = function () {
+                        if (typeof jsonObj != 'undefined') {
+                            HafasMap = new CHafasConnectionMap(Map_mainmap, jsonObj, {
+                                opacityfactor: 1.0,
+                                showGisRouteType0: true
+                            });
+                            HafasMap.show();
+                            connMapArray[""] = HafasMap;
+                            HafasMap.centerRoute();
+                            var l = HafasMap.conn.sections.length;
+                            var baseURL = "http://www.saarfahrplan.de/cgi-bin/query.exe/eny?tpl=mappoly2json&performGis=1&R" +
+                                    "EQMapConnectionId=&MapConnectionId=&REQMapWidth=100&REQMapHeight=100&application" +
+                                    "=DIRECTIONS&guiVCtrl_connection_directions_onlyElement_&MapCenter=&";
+                            var RouteUrl = baseURL + "REQMapConnectionSection=COMPLETE&MapConnectionSection=0&gType=" + HafasMap.conn.sections[0].gisRouteType;
+                            var StartUrl = baseURL + "REQMapConnectionSection=START&MapConnectionSection=0&gType=" + HafasMap.conn.sections[0].gisRouteType;
+                            var EndUrl = baseURL + "REQMapConnectionSection=END&MapConnectionSection=" + (l - 1).toString() + "&gType=" + HafasMap.conn.sections[l - 1].gisRouteType;
+                        }
+                    };
+                    if (typeof Map_mainmap_InitFunctions == "undefined") {
+                        Map_mainmap_InitFunctions = new Array();
+                    }
+                    if (typeof connMapArray == "undefined") 
+                        connMapArray = new Array();
+                    Map_mainmap_InitFunctions[Map_mainmap_InitFunctions.length++] = initCHafasConnection_mainmap;
+                    function showAjaxMap_mainmap() {
+                        Map_mainmap = new CGoogleMap('MapDiv_mainmap', {
+                            coord: new CCoord({lat: 49374326, lon: 6878815}),
+                            language: 'e',
+                            leftinfoclickcontent: infotextmap,
+                            leftinfoclicktitle: 'Select from map',
+                            mode: "",
+                            onshow: function () {
+                                var initLength = Map_mainmap_InitFunctions.length;
+                                for (var i = 0; i < initLength; i++) {
+                                    Map_mainmap_InitFunctions[i]();
+                                }
+                            },
+                            wheelZoom: true,
+                            zoom: 100352
+                        });
+                        Map_mainmap.show();
+                    }
+                    // Karte wird per AJAX ge&#246;ffnet -> direkter Aufruf ohne Event.observe
+                    // ansonsten onload bzw. nach definiertem Timeout, wenn imapNoInit nicht gesetzt
+                    //ist
+                    Event
+                        .observe(window, "load", function () {
+                            showAjaxMap_mainmap();
+                        });
+                    /* ]]> */
+                </script>
+            </form>
+            <table class="hafasFooter" cellspacing="0" summary="Footer">
+                <tr>
+                    <td>
+                        Timetable valid from 13.12.15 to 10.12.16.
+                        <br/>
+                        Software/Data: HAFAS 5.33.STANDARD.4.9.8/5.33.STANDARD.4.9.11 - 12.01.16
+                        <br/>
+                        &#169; 2016
+                        <a href="http://www.vgs-online.de/">VGS mbH</a>,&nbsp;
+                        <a href="http://www.hacon.de/hacon_e/index.shtml">HaCon Ingenieurgesellschaft mbH</a>. All information is issued without liability.
+                        <a
+                            href="http://www.saarfahrplan.de/cgi-bin/help.exe/en?tpl=imprint&"
+                            target="imprint"
+                            onclick="openPopup('about:blank','imprint',200,200,325,275,'000000')">Imprint</a>
+                        <br/>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </body>
+</html>
